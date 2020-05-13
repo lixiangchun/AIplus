@@ -18,6 +18,7 @@ def predict(checkpoint, test_file, gpu_id=0):
     # Load the pretrained model
     model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
     # Set the model in evaluation mode. In this case this is for the Dropout layers
+    model = model.half()
     model.eval()
     
     normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
