@@ -66,8 +66,8 @@ def evaluate(model, criterion, data_loader, device, print_freq=100):
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
 
-    print(' * Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f}'
-          .format(top1=metric_logger.acc1, top5=metric_logger.acc5))
+    print(' * Acc@1 {top1.global_avg:.3f} Acc@2 {top5.global_avg:.3f}'
+          .format(top1=metric_logger.acc1, top5=metric_logger.acc2))
     return metric_logger.acc1.global_avg
 
 
