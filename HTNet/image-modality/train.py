@@ -154,9 +154,10 @@ def main(args):
 
     print("Creating model")
     model = models.resnet152(num_classes=2)
-    pt = "/media/storage1/project/deep_learning/ultrasound_tjmuch/research2.0/resnet152/model_89.pth"
-    checkpoint = torch.load(pt, map_location='cpu')
-    model.load_state_dict(checkpoint['model'])
+    Ca_vs_control_checkpoint = "/media/storage1/project/deep_learning/ultrasound_tjmuch/research2.0/resnet152/model_89.pth"
+    if os.path.exists(Ca_vs_control_checkpoint):
+        checkpoint = torch.load(Ca_vs_control_checkpoint, map_location='cpu')
+        model.load_state_dict(checkpoint['model'])
         
     model.to(device)
     if args.distributed and args.sync_bn:
