@@ -5,18 +5,11 @@ import time
 import torch
 import torch.utils.data
 from torch import nn
-import torchvision
 from torchvision import transforms
 from resnet import resnet152
 import utils
 
-try:
-    from apex import amp
-except ImportError:
-    amp = None
-
-
-def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, print_freq, apex=False):
+def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, print_freq):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value}'))
@@ -30,11 +23,7 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, pri
         loss = criterion(output, target)
 
         optimizer.zero_grad()
-        if apex:
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            loss.backward()
+        loss.backward()
         optimizer.step()
 
         acc1, acc5 = utils.accuracy(output, target, topk=(1, 2))
@@ -125,9 +114,6 @@ def load_data(traindir, valdir, antibody_train, antibody_val, cache_dataset, dis
 
 
 def main(args):
-    if args.apex and amp is None:
-        raise RuntimeError("Failed to import apex. Please install apex from https://www.github.com/nvidia/apex "
-                           "to enable mixed-precision training.")
 
     if args.output_dir:
         utils.mkdir(args.output_dir)
@@ -153,34 +139,36 @@ def main(args):
 
     print("Creating model")
     model = resnet152(num_classes=2, antibody_nums=6) # 6 antibodies
-    checkpoint = torch.load("../hashimoto_thyroiditis/model_79.pth", map_location='cpu')
-    msg = model.load_state_dict(checkpoint['model'], strict=False)
-    print(msg)
+    image_checkpoint = "../hashimoto_thyroiditis/model_79.pth"
+    flag = os.path.exists(image_checkpoint)
+
+    if flag:
+        checkpoint = torch.load(image_checkpoint, map_location='cpu')
+        msg = model.load_state_dict(checkpoint['model'], strict=False)
+        print(msg)
     
-    print("Parameters to be updated:")
-    parameters_to_be_updated = ['fc.weight', 'fc.bias'] + msg.missing_keys
-    print(parameters_to_be_updated)
+        print("Parameters to be updated:")
+        parameters_to_be_updated = ['fc.weight', 'fc.bias'] + msg.missing_keys
+        print(parameters_to_be_updated)
     
-    for name, param in model.named_parameters():
-        if name not in parameters_to_be_updated:
-            param.requires_grad = False
+        for name, param in model.named_parameters():
+            if name not in parameters_to_be_updated:
+                param.requires_grad = False
         
     model.to(device)
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
+    if flag:
+        parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
+        assert len(parameters) == len(parameters_to_be_updated)
+    else:
+        parameters = model.parameters()
+ 
     criterion = nn.CrossEntropyLoss()
 
-    parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
-    assert len(parameters) == len(parameters_to_be_updated)
-    
     optimizer = torch.optim.SGD(
         parameters, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-
-    if args.apex:
-        model, optimizer = amp.initialize(model, optimizer,
-                                          opt_level=args.apex_opt_level
-                                          )
 
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
 
@@ -205,7 +193,7 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args.print_freq, args.apex)
+        train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args.print_freq)
         lr_scheduler.step()
         evaluate(model, criterion, data_loader_test, device=device)
         if args.output_dir:
@@ -280,15 +268,6 @@ def parse_args():
         help="Use pre-trained models from the modelzoo",
         action="store_true",
     )
-
-    # Mixed precision training parameters
-    parser.add_argument('--apex', action='store_true',
-                        help='Use apex for mixed precision training')
-    parser.add_argument('--apex-opt-level', default='O1', type=str,
-                        help='For apex mixed precision training'
-                             'O0 for FP32 training, O1 for mixed precision training.'
-                             'For further detail, see https://github.com/NVIDIA/apex/tree/master/examples/imagenet'
-                        )
 
     # distributed training parameters
     parser.add_argument('--world-size', default=1, type=int,
