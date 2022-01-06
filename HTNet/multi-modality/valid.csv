@@ -1,0 +1,5 @@
+image_name,label
+../image-modality/data/18_crop.jpg,0
+../image-modality/data/26_crop.jpg,1
+../image-modality/data/17_crop.jpg,0
+../image-modality/data/22_crop.jpg,1
