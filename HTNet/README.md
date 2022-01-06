@@ -2,12 +2,12 @@ PyTorch code used to train a deep learning model for the diagnosis of Hashimoto'
 
 Code brought from https://github.com/pytorch/vision/tree/master/references/classification.
 
-The example was tested with with PyTorch (v1.7.1+cu101) and TorchVision (v0.8.2) on Ubuntu 16.04.5 and 20.04.2 LTS.
+The example was tested with Python (v3.8.5), PyTorch (v1.7.1+cu101) and TorchVision (v0.8.2) on Ubuntu 16.04.5 and 20.04.2 LTS.
 
 To run the example `train.sh` for each task, you need to install `pytorch` and `torchvision`.
 For detail installation procedure, please refer to https://pytorch.org.
 
-The example can be run without GPU. GPU cards are recommended to use if training with large-scale image data.
+The example can be run without GPU. However, GPUs are recommended to use if training with large-scale image data.
 
 ## 1. Installation (5 min)
 ```bash
@@ -19,7 +19,7 @@ pip install torch==1.7.1 torchvision==0.8.2 sklearn pandas
 git clone https://github.com/lixiangchun/AIplus
 ```
 
-## 3. Run HTNet example 
+## 3. Run HTNet example (10 min)
 ```bash
 cd AIplus/HTNet
 
